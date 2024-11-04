@@ -64,7 +64,11 @@ int main( void )
 {
     stdio_init_all();
     hard_assert(cyw43_arch_init() == PICO_OK);
+#ifdef USE_MUTEX
+    sem = xSemaphoreCreateMutex();
+#else
     sem = xSemaphoreCreateBinary();
+#endif
     const char *rtos_name;
     rtos_name = "FreeRTOS";
     TaskHandle_t task;
