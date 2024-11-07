@@ -21,6 +21,7 @@ void setUp(void)
     sem_binary = xSemaphoreCreateBinary();
     sem_mutex = xSemaphoreCreateMutex();
     sem = (is_mutex ? sem_mutex : sem_binary);
+    xSemaphoreGive(sem_binary);
 }
 
 void tearDown(void)
@@ -31,7 +32,7 @@ void tearDown(void)
 
 void royal_task(__unused void *args) {
     vTaskDelay(1000);
-    while (xSemaphoreTake(sem, 100) != pdTRUE);
+    while (xSemaphoreTake(sem, portMAX_DELAY) != pdTRUE);
     xSemaphoreGive(sem);
     while (true) {
         // important royal activities
@@ -45,7 +46,7 @@ void jester_task(__unused void *args) {
 
 void serf_task(__unused void *args) {
     while (xSemaphoreTake(sem, 100) != pdTRUE);
-    for (int i = 0; i < 300000000; i++); // gone serfing
+    for (volatile int i = 0; i < 300000000; i++); // gone serfing
     xSemaphoreGive(sem);
     while (true);
 }
