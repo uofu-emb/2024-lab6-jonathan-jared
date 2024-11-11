@@ -6,6 +6,8 @@
 #include <pico/cyw43_arch.h>
 #include <unity.h>
 
+#include "helper.h"
+
 SemaphoreHandle_t sem, sem_binary, sem_mutex;
 bool is_mutex;
 
@@ -72,6 +74,31 @@ void test_priority_inversion(__unused void *args) {
     vTaskDelete(serf);
 }
 
+void test_busy_yield(__unused void *args) {
+    configRUN_TIME_COUNTER_TYPE rt0, rt1;
+    measure_runtime(busy_busy, LOW_TASK_PRIORITY, busy_busy, LOW_TASK_PRIORITY, &rt0, &rt1);
+    // check similar runtimes
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.2, 1, rt0 / (float) rt1, "Dissimilar runtimes (busy_busy, same priority)");
+    measure_runtime(busy_yield, LOW_TASK_PRIORITY, busy_yield, LOW_TASK_PRIORITY, &rt0, &rt1);
+    // check similar runtimes
+    TEST_ASSERT_FLOAT_WITHIN_MESSAGE(0.2, 1, rt0 / (float) rt1, "Dissimilar runtimes (busy_yield, same priority)");
+    measure_runtime(busy_yield, LOW_TASK_PRIORITY, busy_busy, LOW_TASK_PRIORITY, &rt0, &rt1);
+    // check rt1 >> rt0
+    TEST_ASSERT_GREATER_THAN_MESSAGE(rt0, rt1 / 2, "Task failed to yield to busy_busy (same priority)");
+    measure_runtime(busy_busy, HIGH_TASK_PRIORITY, busy_busy, LOW_TASK_PRIORITY, &rt0, &rt1);
+    // check rt0 >> rt1
+    TEST_ASSERT_GREATER_THAN_MESSAGE(rt1, rt0 / 2, "High priority task failed to dominate runtime (busy_busy, high priority start)");
+    measure_runtime(busy_busy, LOW_TASK_PRIORITY, busy_busy, HIGH_TASK_PRIORITY, &rt0, &rt1);
+    // check rt1 >> rt0
+    TEST_ASSERT_GREATER_THAN_MESSAGE(rt0, rt1 / 2, "High priority task failed to dominate runtime (busy_busy, low priority start)");
+    measure_runtime(busy_yield, HIGH_TASK_PRIORITY, busy_yield, LOW_TASK_PRIORITY, &rt0, &rt1);
+    // check rt0 >> rt1
+    TEST_ASSERT_GREATER_THAN_MESSAGE(rt1, rt0 / 2, "High priority task failed to dominate runtime (busy_yield, high priority start)");
+    measure_runtime(busy_yield, LOW_TASK_PRIORITY, busy_yield, HIGH_TASK_PRIORITY, &rt0, &rt1);
+    // check rt1 >> rt0
+    TEST_ASSERT_GREATER_THAN_MESSAGE(rt0, rt1 / 2, "High priority task failed to dominate runtime (busy_yield, low priority start)");
+}
+
 void runner_thread(__unused void *args)
 {
     for (;;) {
@@ -81,6 +108,7 @@ void runner_thread(__unused void *args)
         RUN_TEST(test_priority_inversion);
         is_mutex = true;
         RUN_TEST(test_priority_inversion);
+        RUN_TEST(test_busy_yield);
         UNITY_END();
         vTaskDelay(10000);
     }
