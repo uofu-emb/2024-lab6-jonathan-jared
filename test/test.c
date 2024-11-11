@@ -46,7 +46,7 @@ void jester_task(__unused void *args) {
 
 void serf_task(__unused void *args) {
     while (xSemaphoreTake(sem, 100) != pdTRUE);
-    for (volatile int i = 0; i < 300000000; i++); // gone serfing
+    busy_wait_ms(750); // gone serfing
     xSemaphoreGive(sem);
     while (true);
 }
